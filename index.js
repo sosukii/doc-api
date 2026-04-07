@@ -16,6 +16,14 @@ app.use(cors({
 }))
 app.use(express.json())
 
+app.get('/', (_req, res) => {
+  res.send('doc-api is live')
+})
+
+app.get('/health', (_req, res) => {
+  res.json({ ok: true })
+})
+
 await mongoose.connect(process.env.MONGODB_URI)
 
 const productSchema = new mongoose.Schema(
