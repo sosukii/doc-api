@@ -54,9 +54,46 @@ productSchema.index({ brand: 1, category: 1, subcategory: 1, productType: 1 })
 
 const Product = mongoose.model('Product', productSchema)
 
-app.get('/api/products', async (_req, res) => {
-  const products = await Product.find({ isPublished: true }).sort({ createdAt: -1 })
-  res.json(products)
+app.get('/api/products', async (req, res) => {
+  const page = Math.max(1, Number(req.query.page) || 1)
+  const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 12))
+  const skip = (page - 1) * limit
+
+  const search = String(req.query.search || '').trim()
+  const category = String(req.query.category || '').trim().toLowerCase()
+
+  const filter = { isPublished: true }
+
+  if (category) {
+    filter.category = category
+  }
+
+  if (search) {
+    filter.$or = [
+      { title: { $regex: search, $options: 'i' } },
+      { description: { $regex: search, $options: 'i' } },
+      { category: { $regex: search, $options: 'i' } },
+      { brand: { $regex: search, $options: 'i' } },
+      { article: { $regex: search, $options: 'i' } },
+      { slug: { $regex: search, $options: 'i' } }
+    ]
+  }
+
+  const [items, total] = await Promise.all([
+    Product.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Product.countDocuments(filter)
+  ])
+
+  res.json({
+    items,
+    total,
+    page,
+    limit,
+    totalPages: Math.max(1, Math.ceil(total / limit))
+  })
 })
 
 app.get('/api/products/:slug', async (req, res) => {

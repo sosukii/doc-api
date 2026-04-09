@@ -1,6 +1,9 @@
 # dependencies
 node_modules/
 
+data/
+scripts/
+
 # env
 .env
 .env.*
