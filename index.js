@@ -51,76 +51,144 @@ const productSchema = new mongoose.Schema(
 )
 
 productSchema.index({ brand: 1, category: 1, subcategory: 1, productType: 1 })
+productSchema.index({ createdAt: -1 })
 
-const Product = mongoose.model('Product', productSchema)
+const Product = mongoose.models.Product || mongoose.model('Product', productSchema)
 
 app.get('/api/products', async (req, res) => {
-  const page = Math.max(1, Number(req.query.page) || 1)
-  const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 12))
-  const skip = (page - 1) * limit
+  try {
+    const page = Math.max(1, Number(req.query.page) || 1)
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 12))
+    const skip = (page - 1) * limit
 
-  const search = String(req.query.search || '').trim()
-  const category = String(req.query.category || '').trim().toLowerCase()
+    const search = String(req.query.search || '').trim()
+    const category = String(req.query.category || '').trim().toLowerCase()
 
-  const filter = { isPublished: true }
+    const filter = { isPublished: true }
 
-  if (category) {
-    filter.category = category
+    if (category) {
+      filter.category = category
+    }
+
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { category: { $regex: search, $options: 'i' } },
+        { brand: { $regex: search, $options: 'i' } },
+        { article: { $regex: search, $options: 'i' } },
+        { slug: { $regex: search, $options: 'i' } }
+      ]
+    }
+
+    const [items, total] = await Promise.all([
+      Product.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Product.countDocuments(filter)
+    ])
+
+    res.json({
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit))
+    })
+  } catch (error) {
+    console.error('GET /api/products failed:', error)
+    res.status(500).json({
+      message: 'Failed to load products'
+    })
   }
+})
 
-  if (search) {
-    filter.$or = [
-      { title: { $regex: search, $options: 'i' } },
-      { description: { $regex: search, $options: 'i' } },
-      { category: { $regex: search, $options: 'i' } },
-      { brand: { $regex: search, $options: 'i' } },
-      { article: { $regex: search, $options: 'i' } },
-      { slug: { $regex: search, $options: 'i' } }
-    ]
+app.get('/api/products/categories', async (_req, res) => {
+  try {
+    const categories = await Product.distinct('category', { isPublished: true })
+    res.json(
+      categories
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b))
+    )
+  } catch (error) {
+    console.error('GET /api/products/categories failed:', error)
+    res.status(500).json({
+      message: 'Failed to load categories'
+    })
   }
-
-  const [items, total] = await Promise.all([
-    Product.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit),
-    Product.countDocuments(filter)
-  ])
-
-  res.json({
-    items,
-    total,
-    page,
-    limit,
-    totalPages: Math.max(1, Math.ceil(total / limit))
-  })
 })
 
 app.get('/api/products/:slug', async (req, res) => {
-  const product = await Product.findOne({ slug: req.params.slug, isPublished: true })
-  if (!product) return res.status(404).json({ message: 'Product not found' })
-  res.json(product)
+  try {
+    const product = await Product.findOne({
+      slug: req.params.slug,
+      isPublished: true
+    }).lean()
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' })
+    }
+
+    res.json(product)
+  } catch (error) {
+    console.error(`GET /api/products/${req.params.slug} failed:`, error)
+    res.status(500).json({
+      message: 'Failed to load product'
+    })
+  }
 })
 
 app.post('/api/products', async (req, res) => {
-  const product = await Product.create(req.body)
-  res.status(201).json(product)
+  try {
+    const product = await Product.create(req.body)
+    res.status(201).json(product)
+  } catch (error) {
+    console.error('POST /api/products failed:', error)
+    res.status(500).json({
+      message: 'Failed to create product'
+    })
+  }
 })
 
 app.patch('/api/products/:id', async (req, res) => {
-  const product = await Product.findByIdAndUpdate(
-    req.params.id,
-    req.body,
-    { new: true }
-  )
-  if (!product) return res.status(404).json({ message: 'Product not found' })
-  res.json(product)
+  try {
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    )
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' })
+    }
+
+    res.json(product)
+  } catch (error) {
+    console.error(`PATCH /api/products/${req.params.id} failed:`, error)
+    res.status(500).json({
+      message: 'Failed to update product'
+    })
+  }
 })
 
 app.delete('/api/products/:id', async (req, res) => {
-  const product = await Product.findByIdAndDelete(req.params.id)
-  if (!product) return res.status(404).json({ message: 'Product not found' })
-  res.json({ ok: true })
+  try {
+    const product = await Product.findByIdAndDelete(req.params.id)
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' })
+    }
+
+    res.json({ ok: true })
+  } catch (error) {
+    console.error(`DELETE /api/products/${req.params.id} failed:`, error)
+    res.status(500).json({
+      message: 'Failed to delete product'
+    })
+  }
 })
 
 app.listen(PORT, () => {
