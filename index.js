@@ -25,6 +25,8 @@ app.get('/health', (_req, res) => {
 })
 
 await mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('Mongo connected'))
+  .catch(err => console.error('Mongo error', err))
 
 const productSchema = new mongoose.Schema(
   {
