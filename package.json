@@ -2,9 +2,8 @@
   "name": "doc-api",
   "type": "module",
   "scripts": {
-    "dev": "nodemon index.js",
-    "start": "node index.js",
-    "import:catalog": "node scripts/import-catalog.js"
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js"
   },
   "dependencies": {
     "cloudinary": "^2.9.0",
