@@ -1,10 +1,23 @@
 import Product from '../models/Product.js'
 import { parseQueryList, parsePaginationQuery } from '../utils/query.js'
 
+const parsePrice = (value) => {
+  if (value === undefined || value === null || value === '') {
+    return null
+  }
+
+  const price = Number(value)
+
+  return Number.isFinite(price) ? price : null
+}
+
 const buildProductFilter = (query) => {
   const search = String(query.search || '').trim()
   const brands = parseQueryList(query.brand)
   const categories = parseQueryList(query.category)
+
+  const priceFrom = parsePrice(query.priceFrom)
+  const priceTo = parsePrice(query.priceTo)
 
   const filter = { isPublished: true }
 
@@ -22,6 +35,18 @@ const buildProductFilter = (query) => {
 
   if (categories.length > 1) {
     filter.category = { $in: categories }
+  }
+
+  if (priceFrom !== null || priceTo !== null) {
+    filter.price = {}
+
+    if (priceFrom !== null) {
+      filter.price.$gte = priceFrom
+    }
+
+    if (priceTo !== null) {
+      filter.price.$lte = priceTo
+    }
   }
 
   if (search) {
