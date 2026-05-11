@@ -8,6 +8,10 @@ const productSchema = new mongoose.Schema(
     price: { type: Number, required: true, min: 0 },
     images: { type: [String], default: [] },
 
+    tags: { type: [String], default: [] },
+    customOptions: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    properties: { type: [mongoose.Schema.Types.Mixed], default: [] },
+
     brand: { type: String, default: '', trim: true, lowercase: true },
     category: { type: String, default: '', trim: true, lowercase: true },
     subcategory: { type: String, default: '', trim: true, lowercase: true },
