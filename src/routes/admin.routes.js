@@ -8,8 +8,13 @@ import { listBanners, patchBannerVisibility } from '../controllers/admin.banners
 
 const router = Router()
 
+// ── Public endpoints ───────────────────────────────────────────────────────
 router.post('/login', login)
 
+// Public banners read (used by the main site)
+router.get('/banners/public', listBanners)
+
+// ── Protected endpoints ────────────────────────────────────────────────────
 router.use(requireAuth)
 
 router.get('/settings', listSettings)
