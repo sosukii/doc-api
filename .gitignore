@@ -2,7 +2,7 @@
 node_modules/
 
 data/
-scripts/
+# scripts/ (removed — seed script lives in src/scripts)
 
 # env
 .env
